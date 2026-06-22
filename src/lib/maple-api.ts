@@ -30,7 +30,9 @@ async function mapleGet<T>(path: string, params: Record<string, string> = {}): P
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: { message: res.statusText } }));
-    throw new Error(error?.error?.message || `API 오류: ${res.status}`);
+    const name = error?.error?.name ?? "";
+    const message = error?.error?.message || `API 오류: ${res.status}`;
+    throw new Error(name ? `[${name}] ${message}` : message);
   }
 
   return res.json();

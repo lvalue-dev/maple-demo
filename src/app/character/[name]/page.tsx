@@ -10,6 +10,8 @@ import {
   getCharacterHexaMatrixStat,
   getCharacterSymbolEquipment,
   getCharacterSetEffect,
+  getCharacterHyperStat,
+  getCharacterLinkSkill,
 } from "@/lib/maple-api";
 import CharacterBasicCard from "@/components/CharacterBasic";
 import CharacterTabs from "@/components/CharacterTabs";
@@ -61,9 +63,11 @@ async function fetchCharacterData(name: string) {
     getCharacterHexaMatrixStat(ocid),
     getCharacterSymbolEquipment(ocid),
     getCharacterSetEffect(ocid),
+    getCharacterHyperStat(ocid),
+    getCharacterLinkSkill(ocid),
   ]);
 
-  const [basic, stat, equipment, union, unionRaider, dojang, ability, hexaStat, symbolEquipment, setEffect] = results;
+  const [basic, stat, equipment, union, unionRaider, dojang, ability, hexaStat, symbolEquipment, setEffect, hyperStat, linkSkill] = results;
 
   return {
     basic: extract(basic),
@@ -76,6 +80,8 @@ async function fetchCharacterData(name: string) {
     hexaStat: extract(hexaStat),
     symbolEquipment: extract(symbolEquipment),
     setEffect: extract(setEffect),
+    hyperStat: extract(hyperStat),
+    linkSkill: extract(linkSkill),
   };
 }
 
@@ -91,7 +97,7 @@ export default async function CharacterPage({ params }: PageProps) {
     </div>
   );
 
-  const { basic, stat, equipment, union, unionRaider, dojang, ability, hexaStat, symbolEquipment, setEffect } = data as Exclude<typeof data, { error: string }>;
+  const { basic, stat, equipment, union, unionRaider, dojang, ability, hexaStat, symbolEquipment, setEffect, hyperStat, linkSkill } = data as Exclude<typeof data, { error: string }>;
 
   const characterLevel = (basic?.data as { character_level?: number })?.character_level ?? 0;
 
@@ -114,6 +120,8 @@ export default async function CharacterPage({ params }: PageProps) {
             dojang={dojang!}
             ability={ability!}
             symbolEquipment={symbolEquipment!}
+            hyperStat={hyperStat!}
+            linkSkill={linkSkill!}
             characterLevel={characterLevel}
           />
         </>

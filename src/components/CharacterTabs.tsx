@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart2, Shield, Zap, Trophy, Sword, Star, AlertCircle, Layers, Target } from "lucide-react";
+import { BarChart2, Shield, Zap, Trophy, Sword, Star, AlertCircle, Layers, Target, TrendingUp, Link2 } from "lucide-react";
 import CharacterStatsPanel from "./CharacterStats";
 import CharacterEquipmentPanel from "./CharacterEquipment";
 import CharacterUnionPanel from "./CharacterUnion";
 import CharacterSymbolPanel from "./CharacterSymbol";
 import CharacterBoss from "./CharacterBoss";
+import CharacterHyperStat from "./CharacterHyperStat";
+import CharacterLinkSkill from "./CharacterLinkSkill";
 import type { CharacterStat, CharacterEquipment, UnionInfo, UnionRaider } from "@/types/maple";
 import type { SlotResult } from "@/app/character/[name]/page";
 
@@ -20,6 +22,8 @@ interface Props {
   dojang: SlotResult;
   ability: SlotResult;
   symbolEquipment: SlotResult;
+  hyperStat: SlotResult;
+  linkSkill: SlotResult;
   characterLevel: number;
 }
 
@@ -42,17 +46,19 @@ interface SetEffectInfo {
 }
 
 const TABS = [
-  { id: "stat",   label: "스탯",     icon: <BarChart2 size={14} /> },
-  { id: "equip",  label: "장비",     icon: <Sword size={14} /> },
-  { id: "symbol", label: "심볼",     icon: <Layers size={14} /> },
-  { id: "union",  label: "유니온",   icon: <Shield size={14} /> },
-  { id: "boss",   label: "보스",     icon: <Target size={14} /> },
-  { id: "ability",label: "어빌리티", icon: <Star size={14} /> },
-  { id: "dojang", label: "무릉",     icon: <Trophy size={14} /> },
+  { id: "stat",      label: "스탯",      icon: <BarChart2 size={14} /> },
+  { id: "equip",     label: "장비",      icon: <Sword size={14} /> },
+  { id: "symbol",    label: "심볼",      icon: <Layers size={14} /> },
+  { id: "union",     label: "유니온",    icon: <Shield size={14} /> },
+  { id: "hyperstat", label: "하이퍼스탯", icon: <TrendingUp size={14} /> },
+  { id: "linkskill", label: "링크스킬",  icon: <Link2 size={14} /> },
+  { id: "boss",      label: "보스",      icon: <Target size={14} /> },
+  { id: "ability",   label: "어빌리티",  icon: <Star size={14} /> },
+  { id: "dojang",    label: "무릉",      icon: <Trophy size={14} /> },
 ];
 
 export default function CharacterTabs(props: Props) {
-  const { stat, hexaStat, equipment, setEffect, union, unionRaider, dojang, ability, symbolEquipment, characterLevel } = props;
+  const { stat, hexaStat, equipment, setEffect, union, unionRaider, dojang, ability, symbolEquipment, hyperStat, linkSkill, characterLevel } = props;
   const [active, setActive] = useState("stat");
 
   // max stat attack power for boss panel
@@ -106,6 +112,18 @@ export default function CharacterTabs(props: Props) {
           union.data
             ? <CharacterUnionPanel union={union.data as UnionInfo} raider={unionRaider.data as UnionRaider | undefined} />
             : <ErrorState message={union.error} />
+        )}
+
+        {active === "hyperstat" && (
+          hyperStat.data
+            ? <CharacterHyperStat data={hyperStat.data as Parameters<typeof CharacterHyperStat>[0]["data"]} />
+            : <ErrorState message={hyperStat.error} />
+        )}
+
+        {active === "linkskill" && (
+          linkSkill.data
+            ? <CharacterLinkSkill data={linkSkill.data as Parameters<typeof CharacterLinkSkill>[0]["data"]} />
+            : <ErrorState message={linkSkill.error} />
         )}
 
         {active === "boss" && (
