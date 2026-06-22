@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart2, Shield, Zap, Trophy, Sword, Star } from "lucide-react";
+import { BarChart2, Shield, Zap, Trophy, Sword, Star, AlertCircle } from "lucide-react";
 import CharacterStatsPanel from "./CharacterStats";
 import CharacterEquipmentPanel from "./CharacterEquipment";
 import CharacterUnionPanel from "./CharacterUnion";
 import type { CharacterStat, CharacterEquipment, UnionInfo, UnionRaider } from "@/types/maple";
+import type { SlotResult } from "@/app/character/[name]/page";
 
 interface Props {
-  stat: unknown;
-  equipment: unknown;
-  union: unknown;
-  unionRaider: unknown;
-  dojang: unknown;
-  ability: unknown;
+  stat: SlotResult;
+  equipment: SlotResult;
+  union: SlotResult;
+  unionRaider: SlotResult;
+  dojang: SlotResult;
+  ability: SlotResult;
 }
 
 interface AbilityInfo {
@@ -42,7 +43,6 @@ export default function CharacterTabs({ stat, equipment, union, unionRaider, doj
 
   return (
     <div className="rounded-2xl border border-[#2a2a4a] bg-[#13132a] overflow-hidden">
-      {/* Tab Bar */}
       <div className="flex border-b border-[#2a2a4a] overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <button
@@ -61,38 +61,60 @@ export default function CharacterTabs({ stat, equipment, union, unionRaider, doj
         ))}
       </div>
 
-      {/* Tab Content */}
       <div className="p-5">
         {active === "stat" && (
-          stat
-            ? <CharacterStatsPanel data={stat as CharacterStat} />
-            : <EmptyState message="스탯 정보를 불러올 수 없습니다." />
+          stat.data
+            ? <CharacterStatsPanel data={stat.data as CharacterStat} />
+            : <ErrorState message={stat.error} />
         )}
-
         {active === "equipment" && (
-          equipment
-            ? <CharacterEquipmentPanel data={equipment as CharacterEquipment} />
-            : <EmptyState message="장비 정보를 불러올 수 없습니다." />
+          equipment.data
+            ? <CharacterEquipmentPanel data={equipment.data as CharacterEquipment} />
+            : <ErrorState message={equipment.error} />
         )}
-
         {active === "union" && (
-          union
-            ? <CharacterUnionPanel union={union as UnionInfo} raider={unionRaider as UnionRaider | undefined} />
-            : <EmptyState message="유니온 정보를 불러올 수 없습니다." />
+          union.data
+            ? <CharacterUnionPanel
+                union={union.data as UnionInfo}
+                raider={unionRaider.data as UnionRaider | undefined}
+              />
+            : <ErrorState message={union.error} />
         )}
-
         {active === "ability" && (
-          ability
-            ? <AbilityPanel data={ability as { ability_info: AbilityInfo[]; ability_grade: string; remain_fame: number }} />
-            : <EmptyState message="어빌리티 정보를 불러올 수 없습니다." />
+          ability.data
+            ? <AbilityPanel data={ability.data as { ability_info: AbilityInfo[]; ability_grade: string; remain_fame: number }} />
+            : <ErrorState message={ability.error} />
         )}
-
         {active === "dojang" && (
-          dojang
-            ? <DojangPanel data={dojang as DojangInfo} />
-            : <EmptyState message="무릉도장 정보를 불러올 수 없습니다." />
+          dojang.data
+            ? <DojangPanel data={dojang.data as DojangInfo} />
+            : <ErrorState message={dojang.error} />
         )}
       </div>
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string | null }) {
+  const isPermission =
+    message?.includes("403") ||
+    message?.includes("OPENAPI") ||
+    message?.includes("permission") ||
+    message?.includes("권한");
+  return (
+    <div className="py-10 flex flex-col items-center gap-3">
+      <AlertCircle size={32} className="text-[#ff4444]" />
+      <p className="text-white font-medium">정보를 불러올 수 없습니다</p>
+      {message && (
+        <p className="text-[#8888aa] text-sm text-center max-w-md bg-[#0d0d1a] px-4 py-2 rounded-lg">
+          {message}
+        </p>
+      )}
+      {isPermission && (
+        <p className="text-xs text-[#4a4a7a] text-center max-w-sm mt-1">
+          Nexon Open API 포털에서 해당 API 서비스가 활성화되어 있는지 확인하세요.
+        </p>
+      )}
     </div>
   );
 }
@@ -117,7 +139,6 @@ function AbilityPanel({ data }: {
           <span className="text-xs text-[#8888aa]">명성치 {data.remain_fame?.toLocaleString()}</span>
         </div>
       </div>
-
       <div className="space-y-2">
         {data.ability_info?.map((ab, i) => {
           const colors = GRADE_COLORS[ab.ability_grade] ?? GRADE_COLORS["노말"];
@@ -140,21 +161,15 @@ function DojangPanel({ data }: { data: DojangInfo }) {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold text-white">무릉도장</h2>
-
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <StatBox label="최고 층수" value={`${data.dojang_best_floor}층`} color="text-[#ff6b2b]" />
-        <StatBox
-          label="최고 기록"
-          value={`${minutes}분 ${seconds}초`}
-          color="text-[#ffd700]"
-        />
+        <StatBox label="최고 기록" value={`${minutes}분 ${seconds}초`} color="text-[#ffd700]" />
         <StatBox
           label="기록 날짜"
           value={data.date_dojang_record ? data.date_dojang_record.slice(0, 10) : "-"}
           color="text-[#8888aa]"
         />
       </div>
-
       {data.dojang_best_floor >= 100 && (
         <div className="p-4 rounded-xl bg-gradient-to-r from-[#ff6b2b]/20 to-[#ffd700]/20
           border border-[#ff6b2b]/30 text-center">
@@ -172,14 +187,6 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
     <div className="p-4 rounded-xl bg-[#0d0d1a] border border-[#2a2a4a] text-center">
       <div className="text-xs text-[#8888aa] mb-1">{label}</div>
       <div className={`text-xl font-bold ${color}`}>{value}</div>
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="py-12 text-center">
-      <p className="text-[#4a4a7a]">{message}</p>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import {
   getOcid,
   getCharacterBasic,
@@ -28,15 +27,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+export interface SlotResult {
+  data: unknown;
+  error: string | null;
+}
+
 interface CharacterPageData {
-  basic?: unknown;
-  stat?: unknown;
-  equipment?: unknown;
-  union?: unknown;
-  unionRaider?: unknown;
-  dojang?: unknown;
-  ability?: unknown;
   error?: string;
+  basic?: SlotResult;
+  stat?: SlotResult;
+  equipment?: SlotResult;
+  union?: SlotResult;
+  unionRaider?: SlotResult;
+  dojang?: SlotResult;
+  ability?: SlotResult;
+}
+
+function extract(r: PromiseSettledResult<unknown>): SlotResult {
+  if (r.status === "fulfilled") return { data: r.value, error: null };
+  const msg = r.reason instanceof Error ? r.reason.message : "알 수 없는 오류";
+  return { data: null, error: msg };
 }
 
 async function fetchCharacterData(name: string): Promise<CharacterPageData> {
@@ -61,13 +71,13 @@ async function fetchCharacterData(name: string): Promise<CharacterPageData> {
   const [basic, stat, equipment, union, unionRaider, dojang, ability] = results;
 
   return {
-    basic: basic.status === "fulfilled" ? basic.value : null,
-    stat: stat.status === "fulfilled" ? stat.value : null,
-    equipment: equipment.status === "fulfilled" ? equipment.value : null,
-    union: union.status === "fulfilled" ? union.value : null,
-    unionRaider: unionRaider.status === "fulfilled" ? unionRaider.value : null,
-    dojang: dojang.status === "fulfilled" ? dojang.value : null,
-    ability: ability.status === "fulfilled" ? ability.value : null,
+    basic: extract(basic),
+    stat: extract(stat),
+    equipment: extract(equipment),
+    union: extract(union),
+    unionRaider: extract(unionRaider),
+    dojang: extract(dojang),
+    ability: extract(ability),
   };
 }
 
@@ -79,26 +89,22 @@ export default async function CharacterPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
       <SearchBar defaultValue={charName} />
 
       {data.error ? (
         <ErrorCard message={data.error} />
-      ) : !data.basic ? (
-        <ErrorCard message="캐릭터 기본 정보를 불러올 수 없습니다." />
+      ) : !data.basic?.data ? (
+        <ErrorCard message={data.basic?.error ?? "캐릭터 기본 정보를 불러올 수 없습니다."} />
       ) : (
         <>
-          {/* Basic Info */}
-          <CharacterBasicCard data={data.basic as Parameters<typeof CharacterBasicCard>[0]["data"]} />
-
-          {/* Tabs with all info */}
+          <CharacterBasicCard data={data.basic.data as Parameters<typeof CharacterBasicCard>[0]["data"]} />
           <CharacterTabs
-            stat={data.stat}
-            equipment={data.equipment}
-            union={data.union}
-            unionRaider={data.unionRaider}
-            dojang={data.dojang}
-            ability={data.ability}
+            stat={data.stat!}
+            equipment={data.equipment!}
+            union={data.union!}
+            unionRaider={data.unionRaider!}
+            dojang={data.dojang!}
+            ability={data.ability!}
           />
         </>
       )}

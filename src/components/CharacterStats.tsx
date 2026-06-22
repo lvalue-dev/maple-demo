@@ -2,6 +2,7 @@
 
 import { CharacterStat, StatInfo } from "@/types/maple";
 import { useState } from "react";
+import CharacterConvertedStat from "./CharacterConvertedStat";
 
 interface Props {
   data: CharacterStat;
@@ -77,6 +78,9 @@ export default function CharacterStatsPanel({ data }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* 환산 주스탯 */}
+      <CharacterConvertedStat charClass={data.character_class} stats={statMap} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">최종 스탯</h2>

@@ -6,11 +6,14 @@ function getApiKey(): string {
   return key;
 }
 
-// Yesterday's date in YYYY-MM-DD format (API requires previous day data)
+// Yesterday's date in KST (UTC+9) — Nexon API uses KST timezone
 export function getApiDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  const now = new Date();
+  // Shift to KST
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  // Yesterday in KST
+  kst.setUTCDate(kst.getUTCDate() - 1);
+  return kst.toISOString().slice(0, 10);
 }
 
 async function mapleGet<T>(path: string, params: Record<string, string> = {}): Promise<T> {
