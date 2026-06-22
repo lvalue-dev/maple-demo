@@ -1,4 +1,6 @@
-import { Zap, TrendingUp, Hexagon } from "lucide-react";
+"use client";
+
+import { TrendingUp, Hexagon } from "lucide-react";
 
 interface HexaStatCore {
   slot_id: string;
@@ -28,9 +30,8 @@ interface StatInfo {
   attack: "공격력" | "마력";
 }
 
-// 직업별 주스탯 / 부스탯 / 공마력 분류
 const CLASS_STAT_MAP: Record<string, StatInfo> = {
-  // 전사 (STR)
+  // 전사 STR
   "히어로": { primary: "STR", secondary: "DEX", attack: "공격력" },
   "팔라딘": { primary: "STR", secondary: "DEX", attack: "공격력" },
   "다크나이트": { primary: "STR", secondary: "DEX", attack: "공격력" },
@@ -43,7 +44,7 @@ const CLASS_STAT_MAP: Record<string, StatInfo> = {
   "데몬슬레이어": { primary: "STR", secondary: "DEX", attack: "공격력" },
   "제로": { primary: "STR", secondary: "DEX", attack: "공격력" },
   "영웅": { primary: "STR", secondary: "DEX", attack: "공격력" },
-  // 마법사 (INT)
+  // 마법사 INT
   "아크메이지(불,독)": { primary: "INT", secondary: "LUK", attack: "마력" },
   "아크메이지(썬,콜)": { primary: "INT", secondary: "LUK", attack: "마력" },
   "비숍": { primary: "INT", secondary: "LUK", attack: "마력" },
@@ -59,7 +60,7 @@ const CLASS_STAT_MAP: Record<string, StatInfo> = {
   "청룡": { primary: "INT", secondary: "LUK", attack: "마력" },
   "불독": { primary: "INT", secondary: "LUK", attack: "마력" },
   "썬콜": { primary: "INT", secondary: "LUK", attack: "마력" },
-  // 궁수 (DEX)
+  // 궁수 DEX
   "보우마스터": { primary: "DEX", secondary: "STR", attack: "공격력" },
   "신궁": { primary: "DEX", secondary: "STR", attack: "공격력" },
   "패스파인더": { primary: "DEX", secondary: "STR", attack: "공격력" },
@@ -67,7 +68,7 @@ const CLASS_STAT_MAP: Record<string, StatInfo> = {
   "메르세데스": { primary: "DEX", secondary: "STR", attack: "공격력" },
   "아크": { primary: "DEX", secondary: "STR", attack: "공격력" },
   "카린": { primary: "DEX", secondary: "STR", attack: "공격력" },
-  // 도적 (LUK)
+  // 도적 LUK
   "나이트로드": { primary: "LUK", secondary: "DEX", attack: "공격력" },
   "섀도어": { primary: "LUK", secondary: "DEX", attack: "공격력" },
   "듀얼블레이더": { primary: "LUK", secondary: "DEX", attack: "공격력" },
@@ -107,6 +108,27 @@ function guessStatInfo(stats: Map<string, string>): StatInfo {
   return { primary: "STR", secondary: "DEX", attack: "공격력" };
 }
 
+// 보스 실효 방어율 → 데미지 비율
+// MapleStory 공식: 실효방어 = 적방어율 × (1 - 방무율), cap 100%
+function bossDefRatio(bossDef: number, ignoreRate: number): number {
+  const effectiveDef = Math.min(100, bossDef * (1 - ignoreRate / 100));
+  return 1 - effectiveDef / 100;
+}
+
+function formatKorean(n: number): string {
+  if (n <= 0) return "0";
+  const oku = Math.floor(n / 100_000_000);
+  const man = Math.floor((n % 100_000_000) / 10_000);
+  const rem = n % 10_000;
+  if (oku > 0) {
+    const manPart = man > 0 ? ` ${man.toLocaleString()}만` : "";
+    return `${oku.toLocaleString()}억${manPart}`;
+  }
+  if (man > 0 && rem > 0) return `${man.toLocaleString()}만 ${rem.toLocaleString()}`;
+  if (man > 0) return `${man.toLocaleString()}만`;
+  return n.toLocaleString();
+}
+
 export default function CharacterConvertedStat({ charClass, stats, hexaStat }: Props) {
   const info = CLASS_STAT_MAP[charClass] ?? guessStatInfo(stats);
   const isDemonAvenger = charClass === "데몬어벤저";
@@ -126,64 +148,60 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
 
   // 환산 주스탯 = 주스탯 + 부스탯/4
   const converted = isDemonAvenger
-    ? Math.round(primary / 10000) // 데어는 HP 기반
+    ? Math.round(primary / 10000)
     : Math.round(primary + secondary / 4);
 
-  // 공(마)력 환산 주스탯: 공마력 1 ≈ (주×4+부)/(주×4) 에 해당하는 효과
-  // → 환산 공마력 = attack * (primary * 4 + secondary) / (primary * 4)
+  // 환산 공마력
   const statPerAtk = primary > 0 ? (primary * 4 + secondary) / (primary * 4) : 1;
   const convertedAtk = Math.round(attack * statPerAtk);
 
-  // 데미지 배율 조합 (보스 기준)
-  const dmgMulti = (1 + (damage + bossDmg) / 100) * (1 + finalDmg / 100);
-  const avgCritMulti = critRate >= 100
+  // 크리티컬 보정 (100% 확률 기준)
+  const critMulti = critRate >= 100
     ? 1 + critDmg / 100
     : 1 + (critRate / 100) * (critDmg / 100);
-  const totalMulti = dmgMulti * avgCritMulti;
+
+  // 총 데미지 배율 (보스 기준 = 데미지 + 보공 포함)
+  const totalDmgMulti = (1 + (damage + bossDmg) / 100) * (1 + finalDmg / 100) * critMulti;
+
+  // 환산 = 최대 스탯공격력 × 총 데미지배율
+  const convertedTotal = Math.round(maxStatAtk * totalDmgMulti);
+
+  // 보스 방어율별 데미지 환산
+  const boss300 = Math.round(convertedTotal * bossDefRatio(300, ignoreDef));
+  const boss380 = Math.round(convertedTotal * bossDefRatio(380, ignoreDef));
 
   return (
     <div className="space-y-4 mb-6">
-      {/* 환산 주스탯 헤더 */}
+      {/* 헤더 */}
       <div className="flex items-center gap-2">
         <TrendingUp size={18} className="text-[#ff6b2b]" />
         <h3 className="text-base font-bold text-white">환산 스탯 분석</h3>
         <span className="text-xs text-[#4a4a7a] ml-1">({charClass})</span>
       </div>
 
-      {/* 메인 카드들 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <BigStatCard
+      {/* 환산 + 보스 데미지 */}
+      <div className="grid grid-cols-2 gap-3">
+        <ConvCard
+          label="환산"
+          value={formatKorean(convertedTotal)}
+          sub="스탯공격력 × 데미지배율"
+          gradient="from-[#ff6b2b] to-[#ffd700]"
+        />
+        <ConvCard
           label="환산 주스탯"
           value={converted.toLocaleString()}
-          unit={info.primary}
-          color="from-[#ff6b2b] to-[#ffd700]"
-          hint={`${info.primary} + ${info.secondary}÷4`}
-        />
-        <BigStatCard
-          label={`환산 ${info.attack}`}
-          value={convertedAtk.toLocaleString()}
-          unit={info.attack}
-          color="from-[#7c3aed] to-[#c878ff]"
-          hint={`${info.attack} 기준 환산`}
-        />
-        <BigStatCard
-          label="최대 스탯공격력"
-          value={maxStatAtk > 0 ? maxStatAtk.toLocaleString() : "-"}
-          unit=""
-          color="from-[#00dc64] to-[#00aaaa]"
-          hint={`최소 ${minStatAtk.toLocaleString()}`}
-        />
-        <BigStatCard
-          label="데미지 배율"
-          value={`×${totalMulti.toFixed(2)}`}
-          unit=""
-          color="from-[#ff4444] to-[#ff8800]"
-          hint="보스 + 최종 + 크뎀 합산"
+          sub={`${info.primary} + ${info.secondary}÷4`}
+          gradient="from-[#7c3aed] to-[#c878ff]"
         />
       </div>
 
-      {/* 데미지 구성 상세 */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 gap-3">
+        <BossCard bossDef={300} value={formatKorean(boss300)} ignoreDef={ignoreDef} />
+        <BossCard bossDef={380} value={formatKorean(boss380)} ignoreDef={ignoreDef} />
+      </div>
+
+      {/* 데미지 구성 칩 */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         <DmgChip label="데미지" value={`+${damage}%`} color="text-[#ff8888]" />
         <DmgChip label="보공" value={`+${bossDmg}%`} color="text-[#ff6b2b]" />
         <DmgChip label="최종뎀" value={`+${finalDmg}%`} color="text-[#ffd700]" />
@@ -192,7 +210,34 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
         <DmgChip label="크뎀" value={`+${critDmg}%`} color="text-[#c878ff]" />
       </div>
 
-      {/* 스탯 기여 시각화 */}
+      {/* 환산 그래프 (레이더) */}
+      <div className="p-4 rounded-xl bg-[#0d0d1a] border border-[#2a2a4a]">
+        <p className="text-xs text-[#8888aa] font-medium mb-3">환산 그래프</p>
+        <RadarChart
+          values={[converted, attack, bossDmg, critDmg, ignoreDef, finalDmg + damage]}
+          labels={["스탯", "공마", "보공", "크뎀", "방무", "최종뎀"]}
+          maxValues={[250000, 15000, 300, 100, 100, 200]}
+          colors={{ fill: "rgba(255,107,43,0.25)", stroke: "#ff6b2b" }}
+        />
+      </div>
+
+      {/* 공마력 + 스탯공격력 */}
+      <div className="grid grid-cols-2 gap-3">
+        <ConvCard
+          label={`환산 ${info.attack}`}
+          value={convertedAtk.toLocaleString()}
+          sub={`${info.attack} 기준 환산`}
+          gradient="from-[#00dc64] to-[#00aaaa]"
+        />
+        <ConvCard
+          label="최대 스탯공격력"
+          value={maxStatAtk > 0 ? maxStatAtk.toLocaleString() : "-"}
+          sub={`최소 ${minStatAtk.toLocaleString()}`}
+          gradient="from-[#61b8ff] to-[#7c3aed]"
+        />
+      </div>
+
+      {/* 스탯 기여 비율 */}
       <div className="p-4 rounded-xl bg-[#0d0d1a] border border-[#2a2a4a] space-y-3">
         <p className="text-xs text-[#8888aa] font-medium">스탯 기여 비율</p>
         <StatBar
@@ -209,7 +254,7 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
         />
       </div>
 
-      {/* 헥사 스탯 */}
+      {/* 헥사 스탯 코어 */}
       {hexaStat?.character_hexa_stat_core && hexaStat.character_hexa_stat_core.length > 0 && (
         <HexaStatSection cores={hexaStat.character_hexa_stat_core} />
       )}
@@ -217,25 +262,41 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
   );
 }
 
-function BigStatCard({
-  label, value, unit, color, hint,
-}: {
-  label: string;
-  value: string;
-  unit: string;
-  color: string;
-  hint: string;
+// ─── 서브 컴포넌트 ───────────────────────────────────────────────────────────
+
+function ConvCard({ label, value, sub, gradient }: {
+  label: string; value: string; sub: string; gradient: string;
 }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-[#2a2a4a] bg-[#0d0d1a] p-4">
-      <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-[0.07]`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-[0.07]`} />
       <div className="relative">
-        <p className="text-xs text-[#8888aa] mb-2">{label}</p>
-        <p className={`text-xl font-black bg-gradient-to-r ${color} bg-clip-text text-transparent leading-tight`}>
+        <p className="text-xs text-[#8888aa] mb-1.5">{label}</p>
+        <p className={`text-xl font-black bg-gradient-to-r ${gradient} bg-clip-text text-transparent leading-tight`}>
           {value}
         </p>
-        {unit && <p className="text-xs text-[#4a4a7a] mt-0.5">{unit}</p>}
-        <p className="text-[10px] text-[#4a4a7a] mt-2 border-t border-[#2a2a4a] pt-2">{hint}</p>
+        <p className="text-[10px] text-[#4a4a7a] mt-2 border-t border-[#2a2a4a] pt-2">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
+function BossCard({ bossDef, value, ignoreDef }: {
+  bossDef: 300 | 380; value: string; ignoreDef: number;
+}) {
+  const effectiveDef = Math.min(100, bossDef * (1 - ignoreDef / 100));
+  const ratio = (1 - effectiveDef / 100) * 100;
+  const isHard = bossDef === 380;
+  return (
+    <div className={`relative overflow-hidden rounded-xl border p-4
+      ${isHard ? "border-[#ff4444]/30 bg-[#1a0000]/60" : "border-[#ff6b2b]/30 bg-[#1a0a00]/60"}`}>
+      <div className={`absolute inset-0 opacity-5 bg-gradient-to-br ${isHard ? "from-[#ff4444] to-transparent" : "from-[#ff6b2b] to-transparent"}`} />
+      <div className="relative">
+        <p className="text-xs text-[#8888aa] mb-1.5">보스 {bossDef}% 방어</p>
+        <p className={`text-xl font-black ${isHard ? "text-[#ff6666]" : "text-[#ff6b2b]"}`}>{value}</p>
+        <p className="text-[10px] text-[#4a4a7a] mt-2 border-t border-[#2a2a4a] pt-2">
+          실효 {effectiveDef.toFixed(1)}% → 데미지 {ratio.toFixed(1)}%
+        </p>
       </div>
     </div>
   );
@@ -250,13 +311,8 @@ function DmgChip({ label, value, color }: { label: string; value: string; color:
   );
 }
 
-function StatBar({
-  label, value, max, color,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  color: string;
+function StatBar({ label, value, max, color }: {
+  label: string; value: number; max: number; color: string;
 }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
@@ -272,7 +328,109 @@ function StatBar({
   );
 }
 
-const HEXA_GRADE_COLORS = ["text-[#8888aa]", "text-[#00dc64]", "text-[#61b8ff]", "text-[#c878ff]", "text-[#ffd700]", "text-[#ff6b2b]"];
+// ─── 레이더 차트 ─────────────────────────────────────────────────────────────
+
+interface RadarChartProps {
+  values: number[];
+  labels: string[];
+  maxValues: number[];
+  colors: { fill: string; stroke: string };
+}
+
+function RadarChart({ values, labels, maxValues, colors }: RadarChartProps) {
+  const cx = 130, cy = 130, R = 95;
+  const n = values.length;
+
+  function angle(i: number) {
+    return (-90 + i * (360 / n)) * (Math.PI / 180);
+  }
+
+  function vertex(i: number, ratio: number) {
+    const a = angle(i);
+    return { x: cx + R * ratio * Math.cos(a), y: cy + R * ratio * Math.sin(a) };
+  }
+
+  function toPoints(ratios: number[]) {
+    return ratios.map((r, i) => {
+      const v = vertex(i, r);
+      return `${v.x},${v.y}`;
+    }).join(" ");
+  }
+
+  const ratios = values.map((v, i) => Math.min(Math.max(v, 0) / maxValues[i], 1));
+  const gridLevels = [0.25, 0.5, 0.75, 1];
+
+  return (
+    <svg viewBox="0 0 260 260" className="w-full max-w-[260px] mx-auto select-none">
+      {/* 배경 그리드 */}
+      {gridLevels.map((level) => (
+        <polygon
+          key={level}
+          points={toPoints(Array(n).fill(level))}
+          fill="none"
+          stroke="#2a2a4a"
+          strokeWidth={level === 1 ? 1.5 : 0.8}
+        />
+      ))}
+
+      {/* 축선 */}
+      {Array.from({ length: n }, (_, i) => {
+        const v = vertex(i, 1);
+        return <line key={i} x1={cx} y1={cy} x2={v.x} y2={v.y} stroke="#2a2a4a" strokeWidth="0.8" />;
+      })}
+
+      {/* 데이터 폴리곤 */}
+      <polygon
+        points={toPoints(ratios)}
+        fill={colors.fill}
+        stroke={colors.stroke}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+
+      {/* 데이터 점 */}
+      {ratios.map((r, i) => {
+        const v = vertex(i, r);
+        return <circle key={i} cx={v.x} cy={v.y} r="3" fill={colors.stroke} />;
+      })}
+
+      {/* 레이블 */}
+      {labels.map((label, i) => {
+        const v = vertex(i, 1.28);
+        return (
+          <text
+            key={i}
+            x={v.x}
+            y={v.y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#8888aa"
+            fontSize="10"
+          >
+            {label}
+          </text>
+        );
+      })}
+
+      {/* 25% 눈금 표시 */}
+      {[0.25, 0.5, 0.75].map((level) => {
+        const v = vertex(2, level);
+        return (
+          <text key={level} x={v.x + 4} y={v.y} fill="#4a4a7a" fontSize="7" dominantBaseline="middle">
+            {(level * 100).toFixed(0)}%
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── 헥사 스탯 ───────────────────────────────────────────────────────────────
+
+const HEXA_GRADE_COLORS = [
+  "text-[#8888aa]", "text-[#00dc64]", "text-[#61b8ff]",
+  "text-[#c878ff]", "text-[#ffd700]", "text-[#ff6b2b]",
+];
 
 function HexaStatSection({ cores }: { cores: HexaStatCore[] }) {
   return (
@@ -284,16 +442,13 @@ function HexaStatSection({ cores }: { cores: HexaStatCore[] }) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {cores.map((core) => (
-          <div key={core.slot_id}
-            className="p-3 rounded-xl bg-[#0d0d1a] border border-[#c878ff]/20">
-            {/* 메인 스탯 */}
+          <div key={core.slot_id} className="p-3 rounded-xl bg-[#0d0d1a] border border-[#c878ff]/20">
             <div className="flex items-center justify-between mb-2">
               <span className={`text-sm font-bold ${HEXA_GRADE_COLORS[core.stat_grade] ?? "text-white"}`}>
                 {core.main_stat_name}
               </span>
               <HexaLevelBadge level={core.main_stat_level} isMain />
             </div>
-            {/* 서브 스탯 */}
             <div className="space-y-1">
               {core.sub_stat_name_1 && (
                 <div className="flex items-center justify-between">
@@ -308,7 +463,6 @@ function HexaStatSection({ cores }: { cores: HexaStatCore[] }) {
                 </div>
               )}
             </div>
-            {/* 레벨 바 */}
             <div className="mt-2 h-1 rounded-full bg-[#2a2a4a] overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#7c3aed] to-[#c878ff]"
