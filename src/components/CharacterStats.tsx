@@ -6,6 +6,7 @@ import CharacterConvertedStat from "./CharacterConvertedStat";
 
 interface Props {
   data: CharacterStat;
+  hexaStat?: unknown;
 }
 
 const IMPORTANT_STATS = [
@@ -61,7 +62,7 @@ const STAT_GROUPS: { label: string; keys: string[] }[] = [
   },
 ];
 
-export default function CharacterStatsPanel({ data }: Props) {
+export default function CharacterStatsPanel({ data, hexaStat }: Props) {
   const [activeGroup, setActiveGroup] = useState("전투");
 
   const statMap = new Map<string, string>(
@@ -79,7 +80,7 @@ export default function CharacterStatsPanel({ data }: Props) {
   return (
     <div className="space-y-4">
       {/* 환산 주스탯 */}
-      <CharacterConvertedStat charClass={data.character_class} stats={statMap} />
+      <CharacterConvertedStat charClass={data.character_class} stats={statMap} hexaStat={hexaStat as Parameters<typeof CharacterConvertedStat>[0]["hexaStat"]} />
 
       {/* Header */}
       <div className="flex items-center justify-between">

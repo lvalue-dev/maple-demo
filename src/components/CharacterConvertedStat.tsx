@@ -1,8 +1,25 @@
-import { Zap, TrendingUp } from "lucide-react";
+import { Zap, TrendingUp, Hexagon } from "lucide-react";
+
+interface HexaStatCore {
+  slot_id: string;
+  main_stat_name: string;
+  sub_stat_name_1: string;
+  sub_stat_name_2: string;
+  main_stat_level: number;
+  sub_stat_level_1: number;
+  sub_stat_level_2: number;
+  stat_grade: number;
+}
+
+interface HexaStatData {
+  character_hexa_stat_core?: HexaStatCore[];
+  preset_hexa_stat_core?: HexaStatCore[];
+}
 
 interface Props {
   charClass: string;
   stats: Map<string, string>;
+  hexaStat?: HexaStatData | null;
 }
 
 interface StatInfo {
@@ -90,7 +107,7 @@ function guessStatInfo(stats: Map<string, string>): StatInfo {
   return { primary: "STR", secondary: "DEX", attack: "공격력" };
 }
 
-export default function CharacterConvertedStat({ charClass, stats }: Props) {
+export default function CharacterConvertedStat({ charClass, stats, hexaStat }: Props) {
   const info = CLASS_STAT_MAP[charClass] ?? guessStatInfo(stats);
   const isDemonAvenger = charClass === "데몬어벤저";
 
@@ -191,6 +208,11 @@ export default function CharacterConvertedStat({ charClass, stats }: Props) {
           color="bg-gradient-to-r from-[#7c3aed] to-[#c878ff]"
         />
       </div>
+
+      {/* 헥사 스탯 */}
+      {hexaStat?.character_hexa_stat_core && hexaStat.character_hexa_stat_core.length > 0 && (
+        <HexaStatSection cores={hexaStat.character_hexa_stat_core} />
+      )}
     </div>
   );
 }
@@ -247,5 +269,70 @@ function StatBar({
         <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
       </div>
     </div>
+  );
+}
+
+const HEXA_GRADE_COLORS = ["text-[#8888aa]", "text-[#00dc64]", "text-[#61b8ff]", "text-[#c878ff]", "text-[#ffd700]", "text-[#ff6b2b]"];
+
+function HexaStatSection({ cores }: { cores: HexaStatCore[] }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Hexagon size={15} className="text-[#c878ff]" />
+        <h4 className="text-sm font-bold text-white">헥사 스탯 코어</h4>
+        <span className="text-xs text-[#4a4a7a]">({cores.length}개)</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {cores.map((core) => (
+          <div key={core.slot_id}
+            className="p-3 rounded-xl bg-[#0d0d1a] border border-[#c878ff]/20">
+            {/* 메인 스탯 */}
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-sm font-bold ${HEXA_GRADE_COLORS[core.stat_grade] ?? "text-white"}`}>
+                {core.main_stat_name}
+              </span>
+              <HexaLevelBadge level={core.main_stat_level} isMain />
+            </div>
+            {/* 서브 스탯 */}
+            <div className="space-y-1">
+              {core.sub_stat_name_1 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#8888aa]">{core.sub_stat_name_1}</span>
+                  <HexaLevelBadge level={core.sub_stat_level_1} />
+                </div>
+              )}
+              {core.sub_stat_name_2 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#8888aa]">{core.sub_stat_name_2}</span>
+                  <HexaLevelBadge level={core.sub_stat_level_2} />
+                </div>
+              )}
+            </div>
+            {/* 레벨 바 */}
+            <div className="mt-2 h-1 rounded-full bg-[#2a2a4a] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#7c3aed] to-[#c878ff]"
+                style={{ width: `${(core.main_stat_level / 10) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HexaLevelBadge({ level, isMain = false }: { level: number; isMain?: boolean }) {
+  const isMax = level >= 10;
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded font-bold
+      ${isMax
+        ? "bg-[#ffd700]/20 text-[#ffd700] border border-[#ffd700]/40"
+        : isMain
+          ? "bg-[#c878ff]/20 text-[#c878ff] border border-[#c878ff]/40"
+          : "bg-[#2a2a4a] text-[#8888aa]"
+      }`}>
+      Lv.{level}
+    </span>
   );
 }

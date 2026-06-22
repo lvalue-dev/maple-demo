@@ -5,8 +5,15 @@ import { useState } from "react";
 import { CharacterEquipment, EquipmentItem } from "@/types/maple";
 import { X, Star } from "lucide-react";
 
+interface SetEffectInfo {
+  set_name: string;
+  total_set_count: number;
+  set_effect_info: { set_count: number; set_option: string }[];
+}
+
 interface Props {
   data: CharacterEquipment;
+  setEffect?: SetEffectInfo[] | null;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -212,7 +219,7 @@ const EQUIPMENT_SLOTS = [
   "기계심장",
 ];
 
-export default function CharacterEquipmentPanel({ data }: Props) {
+export default function CharacterEquipmentPanel({ data, setEffect }: Props) {
   const [preset, setPreset] = useState(data.preset_no ?? 1);
 
   const equipList = preset === 1 ? data.item_equipment
@@ -249,36 +256,120 @@ export default function CharacterEquipmentPanel({ data }: Props) {
         ))}
       </div>
 
-      {/* Equipment List */}
+      {/* Equipment Detail List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-        {equipList.filter((item) => item.potential_option_grade).map((item) => {
+        {equipList.map((item) => {
           const grade = item.potential_option_grade ?? "노말";
           const colors = RARITY_COLORS[grade] ?? RARITY_COLORS["노말"];
           const starforce = parseInt(item.starforce ?? "0", 10);
+          const opts = item.item_total_option ?? {};
+          const keyOpts = extractKeyOpts(opts);
           return (
             <div key={item.item_equipment_slot}
-              className={`flex items-center gap-3 p-3 rounded-lg border ${colors}`}>
+              className={`flex gap-3 p-3 rounded-lg border ${colors}`}>
               {item.item_icon && (
-                <div className="relative w-10 h-10 flex-shrink-0">
+                <div className="relative w-10 h-10 flex-shrink-0 mt-0.5">
                   <Image src={item.item_icon} alt={item.item_name} fill className="object-contain" unoptimized />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white truncate">{item.item_name}</div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-[#8888aa]">{item.item_equipment_slot}</span>
+                <div className="flex items-center gap-1.5 mb-1">
                   {starforce > 0 && (
                     <span className={`text-xs font-bold
                       ${starforce >= 17 ? "text-[#ff4444]" : starforce >= 12 ? "text-[#ffaa00]" : "text-[#888888]"}`}>
                       ★{starforce}
                     </span>
                   )}
+                  <span className="text-xs font-medium text-white truncate">{item.item_name}</span>
                 </div>
+                {/* 슬롯 + 잠재 등급 */}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className="text-[10px] text-[#4a4a7a]">{item.item_equipment_slot}</span>
+                  {item.potential_option_grade && (
+                    <span className={`text-[10px] px-1 py-0.5 rounded border font-medium
+                      ${RARITY_COLORS[item.potential_option_grade] ?? RARITY_COLORS["노말"]}`}>
+                      {item.potential_option_grade}
+                    </span>
+                  )}
+                </div>
+                {/* 주요 옵션 칩 */}
+                {keyOpts.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {keyOpts.map(({ label, val }) => (
+                      <span key={label}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-[#0d0d1a] border border-[#2a2a4a] text-[#8888aa]">
+                        <span className="text-[#ff6b2b]">{label}</span> +{val}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* 잠재 옵션 요약 */}
+                {item.potential_option_1 && (
+                  <div className="mt-1.5 space-y-0.5">
+                    {[item.potential_option_1, item.potential_option_2, item.potential_option_3]
+                      .filter(Boolean)
+                      .map((opt, i) => (
+                        <p key={i} className={`text-[10px] truncate
+                          ${RARITY_COLORS[item.potential_option_grade ?? "노말"]?.match(/text-\[#\w+\]/)?.[0] ?? "text-[#8888aa]"}`}>
+                          {opt}
+                        </p>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* 세트 효과 */}
+      {setEffect && setEffect.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-[#2a2a4a]">
+          <h3 className="text-sm font-bold text-white">세트 효과</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {setEffect.map(set => (
+              <div key={set.set_name}
+                className="p-3 rounded-lg bg-[#0d0d1a] border border-[#ffd700]/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-[#ffd700]">{set.set_name}</span>
+                  <span className="text-xs text-[#8888aa]">{set.total_set_count}세트</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {set.set_effect_info.map((eff, i) => (
+                    <li key={i} className="text-xs text-[#8888aa]">
+                      <span className="text-[#ff6b2b] mr-1">{eff.set_count}세트</span>
+                      {eff.set_option}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+const KEY_STAT_LABELS: [string, string][] = [
+  ["공격력", "공격"],
+  ["마력", "마력"],
+  ["보스 몬스터 데미지", "보공"],
+  ["방어율 무시", "방무"],
+  ["크리티컬 데미지", "크뎀"],
+  ["STR", "STR"],
+  ["DEX", "DEX"],
+  ["INT", "INT"],
+  ["LUK", "LUK"],
+  ["올스탯", "올스"],
+  ["HP", "HP"],
+  ["최대 HP", "HP"],
+  ["데미지", "뎀"],
+];
+
+function extractKeyOpts(opts: Record<string, string>): { label: string; val: string }[] {
+  return KEY_STAT_LABELS
+    .map(([key, label]) => ({ label, val: opts[key] }))
+    .filter(({ val }) => val && val !== "0")
+    .slice(0, 6);
 }

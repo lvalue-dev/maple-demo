@@ -7,6 +7,9 @@ import {
   getCharacterUnionRaider,
   getCharacterDojang,
   getCharacterAbility,
+  getCharacterHexaMatrixStat,
+  getCharacterSymbolEquipment,
+  getCharacterSetEffect,
 } from "@/lib/maple-api";
 import CharacterBasicCard from "@/components/CharacterBasic";
 import CharacterTabs from "@/components/CharacterTabs";
@@ -32,28 +35,17 @@ export interface SlotResult {
   error: string | null;
 }
 
-interface CharacterPageData {
-  error?: string;
-  basic?: SlotResult;
-  stat?: SlotResult;
-  equipment?: SlotResult;
-  union?: SlotResult;
-  unionRaider?: SlotResult;
-  dojang?: SlotResult;
-  ability?: SlotResult;
-}
-
 function extract(r: PromiseSettledResult<unknown>): SlotResult {
   if (r.status === "fulfilled") return { data: r.value, error: null };
   const msg = r.reason instanceof Error ? r.reason.message : "알 수 없는 오류";
   return { data: null, error: msg };
 }
 
-async function fetchCharacterData(name: string): Promise<CharacterPageData> {
+async function fetchCharacterData(name: string) {
   let ocid: string;
   try {
-    const ocidRes = await getOcid(name);
-    ocid = ocidRes.ocid;
+    const res = await getOcid(name);
+    ocid = res.ocid;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "캐릭터를 찾을 수 없습니다." };
   }
@@ -66,9 +58,12 @@ async function fetchCharacterData(name: string): Promise<CharacterPageData> {
     getCharacterUnionRaider(ocid),
     getCharacterDojang(ocid),
     getCharacterAbility(ocid),
+    getCharacterHexaMatrixStat(ocid),
+    getCharacterSymbolEquipment(ocid),
+    getCharacterSetEffect(ocid),
   ]);
 
-  const [basic, stat, equipment, union, unionRaider, dojang, ability] = results;
+  const [basic, stat, equipment, union, unionRaider, dojang, ability, hexaStat, symbolEquipment, setEffect] = results;
 
   return {
     basic: extract(basic),
@@ -78,33 +73,48 @@ async function fetchCharacterData(name: string): Promise<CharacterPageData> {
     unionRaider: extract(unionRaider),
     dojang: extract(dojang),
     ability: extract(ability),
+    hexaStat: extract(hexaStat),
+    symbolEquipment: extract(symbolEquipment),
+    setEffect: extract(setEffect),
   };
 }
 
 export default async function CharacterPage({ params }: PageProps) {
   const { name } = await params;
   const charName = decodeURIComponent(name);
-
   const data = await fetchCharacterData(charName);
+
+  if ("error" in data && data.error) return (
+    <div className="space-y-6">
+      <SearchBar defaultValue={charName} />
+      <ErrorCard message={data.error} />
+    </div>
+  );
+
+  const { basic, stat, equipment, union, unionRaider, dojang, ability, hexaStat, symbolEquipment, setEffect } = data as Exclude<typeof data, { error: string }>;
+
+  const characterLevel = (basic?.data as { character_level?: number })?.character_level ?? 0;
 
   return (
     <div className="space-y-6">
       <SearchBar defaultValue={charName} />
 
-      {data.error ? (
-        <ErrorCard message={data.error} />
-      ) : !data.basic?.data ? (
-        <ErrorCard message={data.basic?.error ?? "캐릭터 기본 정보를 불러올 수 없습니다."} />
+      {!basic?.data ? (
+        <ErrorCard message={basic?.error ?? "캐릭터 기본 정보를 불러올 수 없습니다."} />
       ) : (
         <>
-          <CharacterBasicCard data={data.basic.data as Parameters<typeof CharacterBasicCard>[0]["data"]} />
+          <CharacterBasicCard data={basic.data as Parameters<typeof CharacterBasicCard>[0]["data"]} />
           <CharacterTabs
-            stat={data.stat!}
-            equipment={data.equipment!}
-            union={data.union!}
-            unionRaider={data.unionRaider!}
-            dojang={data.dojang!}
-            ability={data.ability!}
+            stat={stat!}
+            hexaStat={hexaStat!}
+            equipment={equipment!}
+            setEffect={setEffect!}
+            union={union!}
+            unionRaider={unionRaider!}
+            dojang={dojang!}
+            ability={ability!}
+            symbolEquipment={symbolEquipment!}
+            characterLevel={characterLevel}
           />
         </>
       )}

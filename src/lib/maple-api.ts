@@ -60,6 +60,10 @@ export async function getCharacterUnionRaider(ocid: string, date?: string) {
   return mapleGet("/maplestory/v1/character/union-raider", { ocid, date: date || getApiDate() });
 }
 
+export async function getCharacterSymbolEquipment(ocid: string, date?: string) {
+  return mapleGet("/maplestory/v1/character/symbol-equipment", { ocid, date: date || getApiDate() });
+}
+
 export async function getCharacterHyperStat(ocid: string, date?: string) {
   return mapleGet("/maplestory/v1/character/hyper-stat", { ocid, date: date || getApiDate() });
 }
