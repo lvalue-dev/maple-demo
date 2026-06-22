@@ -1,8 +1,8 @@
 const BASE_URL = "https://open.api.nexon.com";
 
 function getApiKey(): string {
-  const key = process.env.NEXON_API_KEY;
-  if (!key) throw new Error("NEXON_API_KEY 환경 변수가 설정되지 않았습니다.");
+  const key = process.env.API_KEY;
+  if (!key) throw new Error("API_KEY 환경 변수가 설정되지 않았습니다.");
   return key;
 }
 
