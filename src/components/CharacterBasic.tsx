@@ -28,31 +28,31 @@ export default function CharacterBasicCard({ data }: Props) {
       </div>
 
       <div className="relative flex flex-col sm:flex-row gap-6 p-6">
-        {/* Character Image — large portrait */}
+        {/* Character Image */}
         <div className="flex-shrink-0 flex flex-col items-center gap-3">
-          <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden
-            border-2 border-[#ff6b2b] shadow-[0_0_30px_rgba(255,107,43,0.5)]
+          <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-xl overflow-hidden
+            border-2 border-[#ff6b2b] shadow-[0_0_20px_rgba(255,107,43,0.4)]
             bg-gradient-to-b from-[#1a1a3a] to-[#0d0d1a]">
             {data.character_image ? (
               <Image
                 src={data.character_image}
                 alt={data.character_name}
                 fill
-                sizes="224px"
-                className="object-contain object-bottom scale-125 origin-bottom"
+                sizes="144px"
+                className="object-contain scale-[2] origin-bottom translate-y-2"
                 unoptimized
                 priority
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#4a4a7a]">
-                <Sword size={56} />
+                <Sword size={40} />
               </div>
             )}
           </div>
           {/* Level badge */}
-          <div className="px-5 py-2 rounded-full font-black text-lg
+          <div className="px-4 py-1.5 rounded-full font-black text-base
             bg-gradient-to-r from-[#ff6b2b] to-[#ffd700] text-white
-            shadow-[0_0_20px_rgba(255,107,43,0.5)]">
+            shadow-[0_0_15px_rgba(255,107,43,0.4)]">
             Lv. {data.character_level}
           </div>
         </div>
