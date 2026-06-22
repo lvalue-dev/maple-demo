@@ -39,7 +39,7 @@ export default function CharacterBasicCard({ data }: Props) {
                 alt={data.character_name}
                 fill
                 sizes="144px"
-                className="object-contain scale-[2.2] origin-bottom"
+                className="object-contain scale-[1.5]"
                 unoptimized
                 priority
               />
