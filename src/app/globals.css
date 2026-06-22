@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0d0d1a;
+  --foreground: #e8e8f0;
+  --card: #13132a;
+  --card-border: #2a2a4a;
+  --primary: #ff6b2b;
+  --primary-glow: rgba(255, 107, 43, 0.3);
+  --secondary: #7c3aed;
+  --secondary-glow: rgba(124, 58, 237, 0.3);
+  --accent: #ffd700;
+  --muted: #4a4a7a;
+  --muted-foreground: #8888aa;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Segoe UI", Arial, sans-serif;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--card);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Glow effects */
+.glow-primary {
+  box-shadow: 0 0 20px var(--primary-glow);
+}
+.glow-secondary {
+  box-shadow: 0 0 20px var(--secondary-glow);
+}
+.text-glow {
+  text-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* Gradient backgrounds */
+.bg-maple-gradient {
+  background: linear-gradient(135deg, #0d0d1a 0%, #1a0d2e 50%, #0d1a1a 100%);
+}
+
+.bg-card-gradient {
+  background: linear-gradient(145deg, rgba(19, 19, 42, 0.9), rgba(30, 15, 50, 0.9));
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px var(--primary-glow); }
+  50% { box-shadow: 0 0 25px var(--primary-glow), 0 0 40px var(--primary-glow); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--card) 25%, var(--muted) 50%, var(--card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Tab styling */
+.tab-active {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+/* Equipment item rarity colors */
+.rarity-normal { color: #ffffff; }
+.rarity-rare { color: #61b8ff; }
+.rarity-epic { color: #c878ff; }
+.rarity-unique { color: #ffdc00; }
+.rarity-legendary { color: #00dc64; }
+
+/* Star force colors */
+.star-force-low { color: #888888; }
+.star-force-mid { color: #ffaa00; }
+.star-force-high { color: #ff4444; }
