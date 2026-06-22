@@ -108,11 +108,38 @@ function guessStatInfo(stats: Map<string, string>): StatInfo {
   return { primary: "STR", secondary: "DEX", attack: "공격력" };
 }
 
-// 보스 실효 방어율 → 데미지 비율
-// MapleStory 공식: 실효방어 = 적방어율 × (1 - 방무율), cap 100%
 function bossDefRatio(bossDef: number, ignoreRate: number): number {
   const effectiveDef = Math.min(100, bossDef * (1 - ignoreRate / 100));
   return 1 - effectiveDef / 100;
+}
+
+// HEXA 스탯 코어 레벨당 % 보너스 (메인 슬롯 2%, 서브 슬롯 1%)
+const HEXA_PCT_PER_LEVEL: Record<string, { main: number; sub: number }> = {
+  "보스 데미지":      { main: 2, sub: 1 },
+  "보스 몬스터 데미지": { main: 2, sub: 1 },
+  "크리티컬 데미지":  { main: 2, sub: 1 },
+  "데미지":           { main: 2, sub: 1 },
+  "방어율 무시":      { main: 2, sub: 1 },
+};
+
+interface HexaContrib { boss: number; crit: number; dmg: number }
+
+function calcHexaContrib(cores: HexaStatCore[]): HexaContrib {
+  const r: HexaContrib = { boss: 0, crit: 0, dmg: 0 };
+  const add = (name: string, level: number, isMain: boolean) => {
+    const entry = HEXA_PCT_PER_LEVEL[name];
+    if (!entry || level <= 0) return;
+    const pct = isMain ? entry.main : entry.sub;
+    if (name === "보스 데미지" || name === "보스 몬스터 데미지") r.boss += level * pct;
+    else if (name === "크리티컬 데미지") r.crit += level * pct;
+    else if (name === "데미지") r.dmg += level * pct;
+  };
+  for (const c of cores) {
+    add(c.main_stat_name, c.main_stat_level, true);
+    add(c.sub_stat_name_1, c.sub_stat_level_1, false);
+    add(c.sub_stat_name_2, c.sub_stat_level_2, false);
+  }
+  return r;
 }
 
 function formatKorean(n: number): string {
@@ -146,29 +173,38 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
   const critDmg = getStat(stats, "크리티컬 데미지");
   const critRate = getStat(stats, "크리티컬 확률");
 
+  // 전투력 (API에서 직접 가져옴)
+  const battlePower = getStat(stats, "전투력");
+
   // 환산 주스탯 = 주스탯 + 부스탯/4
   const converted = isDemonAvenger
     ? Math.round(primary / 10000)
     : Math.round(primary + secondary / 4);
 
-  // 환산 공마력
-  const statPerAtk = primary > 0 ? (primary * 4 + secondary) / (primary * 4) : 1;
-  const convertedAtk = Math.round(attack * statPerAtk);
+  // 크리티컬 보정: 기본 크리뎀 35% 포함 (MapleStory 공식)
+  const critMulti = 1 + Math.min(critRate, 100) / 100 * (0.35 + critDmg / 100);
 
-  // 크리티컬 보정 (100% 확률 기준)
-  const critMulti = critRate >= 100
-    ? 1 + critDmg / 100
-    : 1 + (critRate / 100) * (critDmg / 100);
-
-  // 총 데미지 배율 (보스 기준 = 데미지 + 보공 포함)
+  // 환산 = 최대 스탯공격력 × (데미지+보공) × 최종데미지 × 크리티컬보정
   const totalDmgMulti = (1 + (damage + bossDmg) / 100) * (1 + finalDmg / 100) * critMulti;
-
-  // 환산 = 최대 스탯공격력 × 총 데미지배율
   const convertedTotal = Math.round(maxStatAtk * totalDmgMulti);
+
+  // 무릉환산 = 보스데미지 제외
+  const dojoMulti = (1 + damage / 100) * (1 + finalDmg / 100) * critMulti;
+  const dojoConverted = Math.round(maxStatAtk * dojoMulti);
 
   // 보스 방어율별 데미지 환산
   const boss300 = Math.round(convertedTotal * bossDefRatio(300, ignoreDef));
   const boss380 = Math.round(convertedTotal * bossDefRatio(380, ignoreDef));
+
+  // 헥사환산: HEXA 스탯 코어 기여분 계산
+  const hexaCores = hexaStat?.character_hexa_stat_core ?? [];
+  const hc = calcHexaContrib(hexaCores);
+  const dmgNoH = Math.max(0, damage - hc.dmg);
+  const bossNoH = Math.max(0, bossDmg - hc.boss);
+  const critDmgNoH = Math.max(0, critDmg - hc.crit);
+  const critMultiNoH = 1 + Math.min(critRate, 100) / 100 * (0.35 + critDmgNoH / 100);
+  const convertedNoHexa = Math.round(maxStatAtk * (1 + (dmgNoH + bossNoH) / 100) * (1 + finalDmg / 100) * critMultiNoH);
+  const hexaConverted = Math.max(0, convertedTotal - convertedNoHexa);
 
   return (
     <div className="space-y-4 mb-6">
@@ -179,19 +215,33 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
         <span className="text-xs text-[#4a4a7a] ml-1">({charClass})</span>
       </div>
 
-      {/* 환산 + 보스 데미지 */}
+      {/* 핵심 지표 4개 */}
       <div className="grid grid-cols-2 gap-3">
+        <ConvCard
+          label="전투력"
+          value={battlePower > 0 ? formatKorean(battlePower) : "-"}
+          sub="Nexon API 전투력"
+          gradient="from-[#61b8ff] to-[#7c3aed]"
+        />
         <ConvCard
           label="환산"
           value={formatKorean(convertedTotal)}
           sub="스탯공격력 × 데미지배율"
           gradient="from-[#ff6b2b] to-[#ffd700]"
         />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
         <ConvCard
-          label="환산 주스탯"
-          value={converted.toLocaleString()}
-          sub={`${info.primary} + ${info.secondary}÷4`}
-          gradient="from-[#7c3aed] to-[#c878ff]"
+          label="헥사환산"
+          value={hexaConverted > 0 ? formatKorean(hexaConverted) : "-"}
+          sub="HEXA 코어 기여분"
+          gradient="from-[#c878ff] to-[#7c3aed]"
+        />
+        <ConvCard
+          label="무릉"
+          value={formatKorean(dojoConverted)}
+          sub="보스데미지 제외 환산"
+          gradient="from-[#00dc64] to-[#00aaaa]"
         />
       </div>
 
@@ -214,26 +264,26 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
       <div className="p-4 rounded-xl bg-[#0d0d1a] border border-[#2a2a4a]">
         <p className="text-xs text-[#8888aa] font-medium mb-3">환산 그래프</p>
         <RadarChart
-          values={[converted, attack, bossDmg, critDmg, ignoreDef, finalDmg + damage]}
-          labels={["스탯", "공마", "보공", "크뎀", "방무", "최종뎀"]}
-          maxValues={[250000, 15000, 300, 100, 100, 200]}
+          values={[bossDmg, critDmg, ignoreDef, finalDmg, damage, attack]}
+          labels={["보공", "크뎀", "방무", "최종뎀", "데미지", "공마"]}
+          maxValues={[300, 100, 100, 200, 150, 15000]}
           colors={{ fill: "rgba(255,107,43,0.25)", stroke: "#ff6b2b" }}
         />
       </div>
 
-      {/* 공마력 + 스탯공격력 */}
+      {/* 스탯공격력 + 환산주스탯 */}
       <div className="grid grid-cols-2 gap-3">
-        <ConvCard
-          label={`환산 ${info.attack}`}
-          value={convertedAtk.toLocaleString()}
-          sub={`${info.attack} 기준 환산`}
-          gradient="from-[#00dc64] to-[#00aaaa]"
-        />
         <ConvCard
           label="최대 스탯공격력"
           value={maxStatAtk > 0 ? maxStatAtk.toLocaleString() : "-"}
           sub={`최소 ${minStatAtk.toLocaleString()}`}
-          gradient="from-[#61b8ff] to-[#7c3aed]"
+          gradient="from-[#00dc64] to-[#00aaaa]"
+        />
+        <ConvCard
+          label="환산 주스탯"
+          value={converted.toLocaleString()}
+          sub={`${info.primary} + ${info.secondary}÷4`}
+          gradient="from-[#ffd700] to-[#ff6b2b]"
         />
       </div>
 
