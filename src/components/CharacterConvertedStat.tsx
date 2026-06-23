@@ -192,10 +192,6 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
   const dojoMulti = (1 + damage / 100) * (1 + finalDmg / 100) * critMulti;
   const dojoConverted = Math.round(maxStatAtk * dojoMulti);
 
-  // 보스 방어율별 데미지 환산
-  const boss300 = Math.round(convertedTotal * bossDefRatio(300, ignoreDef));
-  const boss380 = Math.round(convertedTotal * bossDefRatio(380, ignoreDef));
-
   // 헥사환산: HEXA 스탯 코어 기여분 계산
   const hexaCores = hexaStat?.character_hexa_stat_core ?? [];
   const hc = calcHexaContrib(hexaCores);
@@ -206,6 +202,17 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
   const convertedNoHexa = Math.round(maxStatAtk * (1 + (dmgNoH + bossNoH) / 100) * (1 + finalDmg / 100) * critMultiNoH);
   const hexaConverted = Math.max(0, convertedTotal - convertedNoHexa);
 
+  // 보스 방어율 380% 적용 핵심 지표
+  const defRatio380 = bossDefRatio(380, ignoreDef);
+  const defRatio300 = bossDefRatio(300, ignoreDef);
+  const converted380 = Math.round(convertedTotal * defRatio380);
+  const hexaConverted380 = Math.round(hexaConverted * defRatio380);
+  const converted300 = Math.round(convertedTotal * defRatio300);
+  const hexaConverted300 = Math.round(hexaConverted * defRatio300);
+
+  const effectiveDef380 = Math.min(100, 380 * (1 - ignoreDef / 100));
+  const effectiveDef300 = Math.min(100, 300 * (1 - ignoreDef / 100));
+
   return (
     <div className="space-y-4 mb-6">
       {/* 헤더 */}
@@ -215,39 +222,64 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
         <span className="text-xs text-[#4a4a7a] ml-1">({charClass})</span>
       </div>
 
-      {/* 핵심 지표 4개 */}
+      {/* 핵심 지표: 환산(380) + 헥사환산(380) — HERO */}
+      <div className="grid grid-cols-2 gap-3">
+        <HeroCard
+          label="환산(380)"
+          value={formatKorean(converted380)}
+          sub={`실효방어 ${effectiveDef380.toFixed(1)}% 적용`}
+          gradient="from-[#ff6b2b] to-[#ffd700]"
+        />
+        <HeroCard
+          label="헥사환산(380)"
+          value={hexaConverted380 > 0 ? formatKorean(hexaConverted380) : "-"}
+          sub="HEXA 코어 기여분 (380%)"
+          gradient="from-[#c878ff] to-[#7c3aed]"
+        />
+      </div>
+
+      {/* 보조 지표 */}
+      <div className="grid grid-cols-2 gap-3">
+        <ConvCard
+          label="환산(300)"
+          value={formatKorean(converted300)}
+          sub={`실효방어 ${effectiveDef300.toFixed(1)}% 적용`}
+          gradient="from-[#ff8844] to-[#ffaa44]"
+        />
+        <ConvCard
+          label="헥사환산(300)"
+          value={hexaConverted300 > 0 ? formatKorean(hexaConverted300) : "-"}
+          sub="HEXA 코어 기여분 (300%)"
+          gradient="from-[#aa66ff] to-[#6633cc]"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <ConvCard
+          label="환산"
+          value={formatKorean(convertedTotal)}
+          sub="보스방어율 미적용"
+          gradient="from-[#61b8ff] to-[#0088cc]"
+        />
+        <ConvCard
+          label="무릉"
+          value={formatKorean(dojoConverted)}
+          sub="보스데미지 제외"
+          gradient="from-[#00dc64] to-[#00aaaa]"
+        />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <ConvCard
           label="전투력"
           value={battlePower > 0 ? formatKorean(battlePower) : "-"}
           sub="Nexon API 전투력"
-          gradient="from-[#61b8ff] to-[#7c3aed]"
+          gradient="from-[#aaaacc] to-[#666688]"
         />
-        <ConvCard
-          label="환산"
-          value={formatKorean(convertedTotal)}
-          sub="스탯공격력 × 데미지배율"
-          gradient="from-[#ff6b2b] to-[#ffd700]"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
         <ConvCard
           label="헥사환산"
           value={hexaConverted > 0 ? formatKorean(hexaConverted) : "-"}
           sub="HEXA 코어 기여분"
           gradient="from-[#c878ff] to-[#7c3aed]"
         />
-        <ConvCard
-          label="무릉"
-          value={formatKorean(dojoConverted)}
-          sub="보스데미지 제외 환산"
-          gradient="from-[#00dc64] to-[#00aaaa]"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <BossCard bossDef={300} value={formatKorean(boss300)} ignoreDef={ignoreDef} />
-        <BossCard bossDef={380} value={formatKorean(boss380)} ignoreDef={ignoreDef} />
       </div>
 
       {/* 데미지 구성 칩 */}
@@ -314,6 +346,24 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
 
 // ─── 서브 컴포넌트 ───────────────────────────────────────────────────────────
 
+function HeroCard({ label, value, sub, gradient }: {
+  label: string; value: string; sub: string; gradient: string;
+}) {
+  return (
+    <div className={`relative overflow-hidden rounded-xl border bg-[#0d0d1a] p-5
+      border-transparent ring-1 ring-[#ff6b2b]/40 shadow-[0_0_20px_rgba(255,107,43,0.12)]`}>
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-[0.12]`} />
+      <div className="relative">
+        <p className="text-xs font-semibold text-[#aaaacc] mb-2 uppercase tracking-wide">{label}</p>
+        <p className={`text-2xl font-black bg-gradient-to-r ${gradient} bg-clip-text text-transparent leading-tight`}>
+          {value}
+        </p>
+        <p className="text-[10px] text-[#6a6a9a] mt-2.5 border-t border-[#2a2a4a] pt-2">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
 function ConvCard({ label, value, sub, gradient }: {
   label: string; value: string; sub: string; gradient: string;
 }) {
@@ -326,27 +376,6 @@ function ConvCard({ label, value, sub, gradient }: {
           {value}
         </p>
         <p className="text-[10px] text-[#4a4a7a] mt-2 border-t border-[#2a2a4a] pt-2">{sub}</p>
-      </div>
-    </div>
-  );
-}
-
-function BossCard({ bossDef, value, ignoreDef }: {
-  bossDef: 300 | 380; value: string; ignoreDef: number;
-}) {
-  const effectiveDef = Math.min(100, bossDef * (1 - ignoreDef / 100));
-  const ratio = (1 - effectiveDef / 100) * 100;
-  const isHard = bossDef === 380;
-  return (
-    <div className={`relative overflow-hidden rounded-xl border p-4
-      ${isHard ? "border-[#ff4444]/30 bg-[#1a0000]/60" : "border-[#ff6b2b]/30 bg-[#1a0a00]/60"}`}>
-      <div className={`absolute inset-0 opacity-5 bg-gradient-to-br ${isHard ? "from-[#ff4444] to-transparent" : "from-[#ff6b2b] to-transparent"}`} />
-      <div className="relative">
-        <p className="text-xs text-[#8888aa] mb-1.5">보스 {bossDef}% 방어</p>
-        <p className={`text-xl font-black ${isHard ? "text-[#ff6666]" : "text-[#ff6b2b]"}`}>{value}</p>
-        <p className="text-[10px] text-[#4a4a7a] mt-2 border-t border-[#2a2a4a] pt-2">
-          실효 {effectiveDef.toFixed(1)}% → 데미지 {ratio.toFixed(1)}%
-        </p>
       </div>
     </div>
   );
