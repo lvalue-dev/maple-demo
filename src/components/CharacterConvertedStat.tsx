@@ -184,32 +184,25 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
   // 크리티컬 보정: 기본 크리뎀 35% 포함 (MapleStory 공식)
   const critMulti = 1 + Math.min(critRate, 100) / 100 * (0.35 + critDmg / 100);
 
-  // 환산 = 환산주스탯 × (데미지+보공) × 최종데미지 × 크리티컬보정
-  // maplescouter 방식: 스탯공격력이 아닌 환산주스탯(주스탯+부스탯/4)을 베이스로 사용
-  const totalDmgMulti = (1 + (damage + bossDmg) / 100) * (1 + finalDmg / 100) * critMulti;
-  const convertedTotal = Math.round(converted * totalDmgMulti);
-
-  // 무릉환산 = 보스데미지 제외
-  const dojoMulti = (1 + damage / 100) * (1 + finalDmg / 100) * critMulti;
-  const dojoConverted = Math.round(converted * dojoMulti);
-
-  // 헥사환산: HEXA 스탯 코어 기여분 계산
-  const hexaCores = hexaStat?.character_hexa_stat_core ?? [];
-  const hc = calcHexaContrib(hexaCores);
-  const dmgNoH = Math.max(0, damage - hc.dmg);
-  const bossNoH = Math.max(0, bossDmg - hc.boss);
-  const critDmgNoH = Math.max(0, critDmg - hc.crit);
-  const critMultiNoH = 1 + Math.min(critRate, 100) / 100 * (0.35 + critDmgNoH / 100);
-  const convertedNoHexa = Math.round(converted * (1 + (dmgNoH + bossNoH) / 100) * (1 + finalDmg / 100) * critMultiNoH);
-  const hexaConverted = Math.max(0, convertedTotal - convertedNoHexa);
-
-  // 보스 방어율 380% 적용 핵심 지표
+  // maplescouter 정의:
+  //   환산(380) = 환산주스탯 (= 주스탯 + 부스탯/4), 데미지 배율 없음
+  //   헥사환산(380) = 환산주스탯 × bossDefRatio(380, ignoreDef)
   const defRatio380 = bossDefRatio(380, ignoreDef);
   const defRatio300 = bossDefRatio(300, ignoreDef);
-  const converted380 = Math.round(convertedTotal * defRatio380);
-  const hexaConverted380 = Math.round(hexaConverted * defRatio380);
-  const converted300 = Math.round(convertedTotal * defRatio300);
-  const hexaConverted300 = Math.round(hexaConverted * defRatio300);
+
+  const converted380 = Math.round(converted * defRatio380);
+  const converted300 = Math.round(converted * defRatio300);
+
+  // 데미지 배율 포함 환산 (참고용)
+  const totalDmgMulti = (1 + (damage + bossDmg) / 100) * (1 + finalDmg / 100) * critMulti;
+  const dojoMulti = (1 + damage / 100) * (1 + finalDmg / 100) * critMulti;
+  const convertedTotal = Math.round(converted * totalDmgMulti);
+  const dojoConverted = Math.round(converted * dojoMulti);
+
+  // 헥사환산 = 환산 × bossDefRatio (maplescouter 기준)
+  const hexaConverted380 = converted380;
+  const hexaConverted300 = converted300;
+  const hexaConverted = converted;
 
   const effectiveDef380 = Math.min(100, 380 * (1 - ignoreDef / 100));
   const effectiveDef300 = Math.min(100, 300 * (1 - ignoreDef / 100));
@@ -227,14 +220,14 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
       <div className="grid grid-cols-2 gap-3">
         <HeroCard
           label="환산(380)"
-          value={converted380.toLocaleString()}
-          sub={`실효방어 ${effectiveDef380.toFixed(1)}% 적용`}
+          value={converted.toLocaleString()}
+          sub="주스탯 + 부스탯÷4"
           gradient="from-[#ff6b2b] to-[#ffd700]"
         />
         <HeroCard
           label="헥사환산(380)"
-          value={hexaConverted380 > 0 ? hexaConverted380.toLocaleString() : "-"}
-          sub="HEXA 코어 기여분 (380%)"
+          value={hexaConverted380.toLocaleString()}
+          sub={`실효방어 ${effectiveDef380.toFixed(1)}% 적용`}
           gradient="from-[#c878ff] to-[#7c3aed]"
         />
       </div>
@@ -243,22 +236,22 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
       <div className="grid grid-cols-2 gap-3">
         <ConvCard
           label="환산(300)"
-          value={converted300.toLocaleString()}
-          sub={`실효방어 ${effectiveDef300.toFixed(1)}% 적용`}
+          value={converted.toLocaleString()}
+          sub="주스탯 + 부스탯÷4"
           gradient="from-[#ff8844] to-[#ffaa44]"
         />
         <ConvCard
           label="헥사환산(300)"
-          value={hexaConverted300 > 0 ? hexaConverted300.toLocaleString() : "-"}
-          sub="HEXA 코어 기여분 (300%)"
+          value={hexaConverted300.toLocaleString()}
+          sub={`실효방어 ${effectiveDef300.toFixed(1)}% 적용`}
           gradient="from-[#aa66ff] to-[#6633cc]"
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <ConvCard
-          label="환산"
+          label="환산 (데미지 포함)"
           value={convertedTotal.toLocaleString()}
-          sub="보스방어율 미적용"
+          sub="데미지·보공·크리 배율 포함"
           gradient="from-[#61b8ff] to-[#0088cc]"
         />
         <ConvCard
