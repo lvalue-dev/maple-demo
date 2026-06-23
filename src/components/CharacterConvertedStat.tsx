@@ -184,13 +184,14 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
   // 크리티컬 보정: 기본 크리뎀 35% 포함 (MapleStory 공식)
   const critMulti = 1 + Math.min(critRate, 100) / 100 * (0.35 + critDmg / 100);
 
-  // 환산 = 최대 스탯공격력 × (데미지+보공) × 최종데미지 × 크리티컬보정
+  // 환산 = 환산주스탯 × (데미지+보공) × 최종데미지 × 크리티컬보정
+  // maplescouter 방식: 스탯공격력이 아닌 환산주스탯(주스탯+부스탯/4)을 베이스로 사용
   const totalDmgMulti = (1 + (damage + bossDmg) / 100) * (1 + finalDmg / 100) * critMulti;
-  const convertedTotal = Math.round(maxStatAtk * totalDmgMulti);
+  const convertedTotal = Math.round(converted * totalDmgMulti);
 
   // 무릉환산 = 보스데미지 제외
   const dojoMulti = (1 + damage / 100) * (1 + finalDmg / 100) * critMulti;
-  const dojoConverted = Math.round(maxStatAtk * dojoMulti);
+  const dojoConverted = Math.round(converted * dojoMulti);
 
   // 헥사환산: HEXA 스탯 코어 기여분 계산
   const hexaCores = hexaStat?.character_hexa_stat_core ?? [];
@@ -199,7 +200,7 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
   const bossNoH = Math.max(0, bossDmg - hc.boss);
   const critDmgNoH = Math.max(0, critDmg - hc.crit);
   const critMultiNoH = 1 + Math.min(critRate, 100) / 100 * (0.35 + critDmgNoH / 100);
-  const convertedNoHexa = Math.round(maxStatAtk * (1 + (dmgNoH + bossNoH) / 100) * (1 + finalDmg / 100) * critMultiNoH);
+  const convertedNoHexa = Math.round(converted * (1 + (dmgNoH + bossNoH) / 100) * (1 + finalDmg / 100) * critMultiNoH);
   const hexaConverted = Math.max(0, convertedTotal - convertedNoHexa);
 
   // 보스 방어율 380% 적용 핵심 지표
@@ -226,13 +227,13 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
       <div className="grid grid-cols-2 gap-3">
         <HeroCard
           label="환산(380)"
-          value={formatKorean(converted380)}
+          value={converted380.toLocaleString()}
           sub={`실효방어 ${effectiveDef380.toFixed(1)}% 적용`}
           gradient="from-[#ff6b2b] to-[#ffd700]"
         />
         <HeroCard
           label="헥사환산(380)"
-          value={hexaConverted380 > 0 ? formatKorean(hexaConverted380) : "-"}
+          value={hexaConverted380 > 0 ? hexaConverted380.toLocaleString() : "-"}
           sub="HEXA 코어 기여분 (380%)"
           gradient="from-[#c878ff] to-[#7c3aed]"
         />
@@ -242,13 +243,13 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
       <div className="grid grid-cols-2 gap-3">
         <ConvCard
           label="환산(300)"
-          value={formatKorean(converted300)}
+          value={converted300.toLocaleString()}
           sub={`실효방어 ${effectiveDef300.toFixed(1)}% 적용`}
           gradient="from-[#ff8844] to-[#ffaa44]"
         />
         <ConvCard
           label="헥사환산(300)"
-          value={hexaConverted300 > 0 ? formatKorean(hexaConverted300) : "-"}
+          value={hexaConverted300 > 0 ? hexaConverted300.toLocaleString() : "-"}
           sub="HEXA 코어 기여분 (300%)"
           gradient="from-[#aa66ff] to-[#6633cc]"
         />
@@ -256,13 +257,13 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
       <div className="grid grid-cols-2 gap-3">
         <ConvCard
           label="환산"
-          value={formatKorean(convertedTotal)}
+          value={convertedTotal.toLocaleString()}
           sub="보스방어율 미적용"
           gradient="from-[#61b8ff] to-[#0088cc]"
         />
         <ConvCard
           label="무릉"
-          value={formatKorean(dojoConverted)}
+          value={dojoConverted.toLocaleString()}
           sub="보스데미지 제외"
           gradient="from-[#00dc64] to-[#00aaaa]"
         />
@@ -276,7 +277,7 @@ export default function CharacterConvertedStat({ charClass, stats, hexaStat }: P
         />
         <ConvCard
           label="헥사환산"
-          value={hexaConverted > 0 ? formatKorean(hexaConverted) : "-"}
+          value={hexaConverted > 0 ? hexaConverted.toLocaleString() : "-"}
           sub="HEXA 코어 기여분"
           gradient="from-[#c878ff] to-[#7c3aed]"
         />
