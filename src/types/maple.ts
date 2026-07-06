@@ -27,6 +27,18 @@ export interface CharacterStat {
   remain_ap: number;
 }
 
+export interface AuctionItem {
+  item_name: string;
+  item_icon: string;
+  reserve_price: number;
+  date_auction_expire: string;
+  item_option: ItemOption[];
+}
+
+export interface AuctionItemResponse {
+  auction_item: AuctionItem[];
+}
+
 export interface ItemOption {
   option_type: string;
   option_value: string;

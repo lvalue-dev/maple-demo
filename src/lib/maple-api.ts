@@ -131,6 +131,21 @@ export async function getOverallRanking(params: {
   return mapleGet("/maplestory/v1/ranking/overall", p);
 }
 
+export async function getAuctionItem(params: {
+  item_name: string;
+  item_upgrade_number?: string;
+  item_option_value_first?: string;
+  item_option_value_second?: string;
+  item_option_type?: string;
+}) {
+  const p: Record<string, string> = { item_name: params.item_name };
+  if (params.item_upgrade_number) p.item_upgrade_number = params.item_upgrade_number;
+  if (params.item_option_value_first) p.item_option_value_first = params.item_option_value_first;
+  if (params.item_option_value_second) p.item_option_value_second = params.item_option_value_second;
+  if (params.item_option_type) p.item_option_type = params.item_option_type;
+  return mapleGet("/maplestory/v1/maplestory-auction", p);
+}
+
 export async function getUnionRanking(params: {
   date?: string;
   world_name?: string;

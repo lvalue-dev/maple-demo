@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Trophy, Home, Search } from "lucide-react";
+import { Trophy, Home, Gavel } from "lucide-react";
 
 export default function Navbar() {
   return (
@@ -18,6 +18,7 @@ export default function Navbar() {
         <div className="flex items-center gap-1">
           <NavLink href="/" icon={<Home size={15} />} label="홈" />
           <NavLink href="/ranking" icon={<Trophy size={15} />} label="랭킹" />
+          <NavLink href="/auction" icon={<Gavel size={15} />} label="옥션" />
         </div>
       </div>
     </nav>
