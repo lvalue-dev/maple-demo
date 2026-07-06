@@ -67,8 +67,14 @@ export default function AuctionSearch() {
       </form>
 
       {error && (
-        <div className="p-6 text-center rounded-xl bg-[#13132a] border border-[#2a2a4a]">
+        <div className="p-6 text-center rounded-xl bg-[#13132a] border border-[#2a2a4a] space-y-2">
           <p className="text-[#ff4444] text-sm">{error}</p>
+          {(error.includes("OPENAPI") || error.includes("403") || error.includes("권한")) && (
+            <p className="text-xs text-[#4a4a7a] max-w-sm mx-auto">
+              Nexon Open API 개발자 센터에서 해당 API 키에 &quot;경매장 정보&quot; 서비스가
+              활성화되어 있는지 확인하세요. 캐릭터 조회 API와 별도로 등록이 필요합니다.
+            </p>
+          )}
         </div>
       )}
 
