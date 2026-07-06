@@ -76,20 +76,24 @@ export default function CharacterTabs(props: Props) {
           <button
             key={tab.id}
             onClick={() => setActive(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium whitespace-nowrap
-              border-b-2 transition-all duration-200 flex-shrink-0
+            className={`relative flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium whitespace-nowrap
+              border-b-2 border-transparent transition-colors duration-200 flex-shrink-0
               ${active === tab.id
-                ? "border-[#ff6b2b] text-[#ff6b2b] bg-[#ff6b2b]/5"
-                : "border-transparent text-[#8888aa] hover:text-white hover:bg-[#0d0d1a]/40"
+                ? "text-[#ff6b2b] bg-[#ff6b2b]/5"
+                : "text-[#8888aa] hover:text-white hover:bg-[#0d0d1a]/40"
               }`}
           >
             {tab.icon}
             {tab.label}
+            {active === tab.id && (
+              <span className="absolute left-3 right-3 -bottom-px h-0.5 rounded-full
+                bg-gradient-to-r from-[#ff6b2b] to-[#ffd700]" />
+            )}
           </button>
         ))}
       </div>
 
-      <div className="p-5">
+      <div key={active} className="p-5 animate-tab-in">
         {active === "stat" && (
           stat.data
             ? <CharacterStatsPanel data={stat.data as CharacterStat} hexaStat={hexaStat.data} />

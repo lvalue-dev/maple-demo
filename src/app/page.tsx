@@ -1,6 +1,6 @@
 import SearchBar from "@/components/SearchBar";
 import Link from "next/link";
-import { Trophy, Sword, Shield, Zap, Star } from "lucide-react";
+import { Trophy, Sword, Shield, Zap, Star, Swords, ArrowRight } from "lucide-react";
 
 const POPULAR_CLASSES = [
   "아크", "일리움", "카인", "라라", "칼리", "아델", "카데나",
@@ -45,6 +45,16 @@ export default function HomePage() {
 
         <SearchBar />
 
+        {/* New feature spotlight */}
+        <Link href="/compare"
+          className="group inline-flex items-center gap-2 px-4 py-2 rounded-full
+            bg-[#7c3aed]/10 border border-[#7c3aed]/30 text-[#c878ff] text-sm font-medium
+            hover:bg-[#7c3aed]/20 hover:border-[#7c3aed]/50 transition-all duration-200">
+          <Swords size={14} />
+          NEW · 캐릭터 비교 기능 써보기
+          <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+
         {/* Quick links */}
         <div className="flex items-center justify-center gap-2 flex-wrap">
           {POPULAR_CLASSES.slice(0, 8).map((cls) => (
@@ -58,7 +68,7 @@ export default function HomePage() {
       </section>
 
       {/* Feature Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <FeatureCard
           icon={<Sword size={22} className="text-[#ff6b2b]" />}
           title="캐릭터 정보"
@@ -82,6 +92,13 @@ export default function HomePage() {
           title="유니온 & 랭킹"
           desc="유니온 등급, 공격대 효과 및 서버별 전체 랭킹"
           color="border-[#ffd700]/30"
+        />
+        <FeatureCard
+          href="/compare"
+          icon={<Swords size={22} className="text-[#61b8ff]" />}
+          title="캐릭터 비교"
+          desc="두 캐릭터의 전투력·환산 스탯을 나란히 대결시켜 비교"
+          color="border-[#61b8ff]/30"
         />
       </section>
 
@@ -132,22 +149,30 @@ function FeatureCard({
   title,
   desc,
   color,
+  href,
 }: {
   icon: React.ReactNode;
   title: string;
   desc: string;
   color: string;
+  href?: string;
 }) {
-  return (
-    <div className={`p-5 rounded-xl bg-[#13132a] border ${color} space-y-3
-      hover:shadow-[0_0_20px_rgba(255,107,43,0.1)] transition-all duration-300`}>
-      <div className="w-10 h-10 rounded-lg bg-[#0d0d1a] flex items-center justify-center">
+  const className = `group p-5 rounded-xl bg-[#13132a] border ${color} space-y-3 block
+    hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(255,107,43,0.1)] transition-all duration-300`;
+  const content = (
+    <>
+      <div className="w-10 h-10 rounded-lg bg-[#0d0d1a] flex items-center justify-center
+        group-hover:scale-110 transition-transform duration-300">
         {icon}
       </div>
       <div>
         <h3 className="font-semibold text-white">{title}</h3>
         <p className="text-xs text-[#8888aa] mt-1 leading-relaxed">{desc}</p>
       </div>
-    </div>
+    </>
   );
+
+  return href
+    ? <Link href={href} className={className}>{content}</Link>
+    : <div className={className}>{content}</div>;
 }
